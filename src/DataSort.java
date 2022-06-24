@@ -6,6 +6,8 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import javax.swing.*;
 import java.util.Optional;
 
 public class DataSort {
@@ -165,7 +167,7 @@ public class DataSort {
         //text-query-tweets.xlsx
 
         try {
-            FileInputStream tweetFis = new FileInputStream(new File("script.xlsx"));
+            FileInputStream tweetFis = new FileInputStream(new File("text-query-tweets.xlsx"));
 
             //make a workbook for the file, then a sheet object
             XSSFWorkbook tweetWb = new XSSFWorkbook(tweetFis);
@@ -175,21 +177,94 @@ public class DataSort {
             String user = "";
             String date = "";
             String time = "";
+            String[] dateTime;
+            String[] userTemp;
+            ArrayList<String> hashtags = new ArrayList<String>();
+            String[] hashTemps;
+            String hash;
+
+            ArrayList<Tweet> allTweets = new ArrayList<Tweet>();
 
             //begin sorting through the data
             //for every row in the sheet
             for (Row row : scriptSheet){
+                //(except the first row, all headings)
+                if (row.getRowNum() == 0)
+                    continue;
                 //and for every cell in the rows
                 for (Cell cell : row) {
+                    //check which column the cell is from
+                    switch (cell.getColumnIndex()){
 
+                        //if it's in column 2, it contains date & time information
+                        case (2): {
+                            //grab the information and split it on space (btwn date & time) and '+' (after time)
+                            dateTime = cell.getStringCellValue().split("[ +]");
+
+                            //then sort into date (YY/MM/DD) and time (Hr:Min:Sec)
+                            date = dateTime[0].replaceAll("-","\\/");
+                            time = dateTime[1];
+                            break;
+                        }
+
+                        //if it's in column 4, it contains the tweet's contents
+                        case (4): {
+                            //grab the data
+                            content = cell.getStringCellValue();
+                            //fix some corruption of the data
+                            //
+                            //remove ðŸ¤£ and ðŸ˜
+                            content = content.replaceAll("â€™", "'");
+                            content = content.replaceAll("ðŸ˜", "");
+                            content = content.replaceAll("ðŸ¤£", "");
+                            break;
+                        }
+
+                        //if it's in column 6, it contains the username
+                        case(6):{
+                            //grab the information and split it on ' (marks each new section)
+                            userTemp = cell.getStringCellValue().split("'");
+
+                            //each cell is written the same way, so having split this way, the true username is
+                            //now contained in index 7. grab it
+                            user = userTemp[7];
+                            break;
+                        }
+
+                        //if it's in column 25, it contains the hashtags
+                        case(25):
+                            //the hashtags are stored as: ['hashtag1', 'hashtag2'], so we parse on ','
+                            hashTemps = cell.getStringCellValue().split(",");
+
+                            //then we clean up the strings and add it to the arraylist, if there are any at all
+                            if (hashTemps.length != 0)
+                                for (int i = 0; i < hashTemps.length; i++){
+                                    hash = hashTemps[i].replaceAll("\\[", "");
+                                    hash = (hashTemps[i].replaceAll("'", ""));
+                                    hashtags.add(hash);
+                                }
+                            else
+                                hashtags = null;
+                            break;
+                    }
                 }
+                //once all of the cells in the row have been iterated through, we can make the Tweet object and
+                //add it to the tweet list
+                Tweet t = new Tweet(content, user, date, time, hashtags);
+                allTweets.add(t);
             }
+
+            //*****TESTING**********
+            //print the tweet list
+            for (Tweet t : allTweets)
+                System.out.println(t);
+
         } catch (IOException e) {
             System.out.println("The system encountered and IOException:");
             e.printStackTrace();
             System.exit(0);
         }
-
+        /*
         //finish calculating the average length of dialogue lines by dividing by total number of lines
         avgLength /= allDialogue.size();
 
@@ -207,5 +282,7 @@ public class DataSort {
         System.out.println("Total number of terms in all episodes: " + termList.size());
 
 
+
+         */
     }
 }
