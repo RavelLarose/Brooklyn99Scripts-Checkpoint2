@@ -11,16 +11,17 @@ import java.util.Optional;
 public class DataSort {
 
     public static void main (String [] args){
+        //SCRIPTS DATABASE************************************************************************
         //initialize an arrayList to hold every line of dialogue
         ArrayList<Line> allDialogue = new ArrayList<Line>();
 
         try{
             //find and open the data file
-            FileInputStream fis = new FileInputStream(new File("script.xlsx"));
+            FileInputStream scriptFis = new FileInputStream(new File("script.xlsx"));
 
             //make a workbook for the file, then a sheet object
-            XSSFWorkbook wb = new XSSFWorkbook(fis);
-            XSSFSheet sheet = wb.getSheetAt(0);
+            XSSFWorkbook scriptWb = new XSSFWorkbook(scriptFis);
+            XSSFSheet scriptSheet = scriptWb.getSheetAt(0);
 
             String name = "";
             String dialogue = "";
@@ -29,7 +30,7 @@ public class DataSort {
 
             //begin sorting through the data
             //for every row in the sheet
-            for (Row row : sheet){
+            for (Row row : scriptSheet){
                 //and for every cell in the rows
                 for (Cell cell : row){
                     //if this comes from Column 0, it is the name of the speaking character
@@ -148,6 +149,45 @@ public class DataSort {
             }
 
 
+        }
+
+        //WORK IN PROGRESS:
+        //TRY TO IMPLEMENT FINDING MOST COMMON TERM BY CHARACTER
+        /*
+        String[] mostCommon = new String [4];
+        for (int i = 0; i < 4; i++){
+            //go through each of the
+        }
+        */
+
+        //TWEETS DATABASE***************************************************************************
+        //read in the .xlsx file first
+        //text-query-tweets.xlsx
+
+        try {
+            FileInputStream tweetFis = new FileInputStream(new File("script.xlsx"));
+
+            //make a workbook for the file, then a sheet object
+            XSSFWorkbook tweetWb = new XSSFWorkbook(tweetFis);
+            XSSFSheet scriptSheet = tweetWb.getSheetAt(0);
+
+            String content = "";
+            String user = "";
+            String date = "";
+            String time = "";
+
+            //begin sorting through the data
+            //for every row in the sheet
+            for (Row row : scriptSheet){
+                //and for every cell in the rows
+                for (Cell cell : row) {
+
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("The system encountered and IOException:");
+            e.printStackTrace();
+            System.exit(0);
         }
 
         //finish calculating the average length of dialogue lines by dividing by total number of lines
