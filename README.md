@@ -14,6 +14,7 @@ Planning to Track:
 - Average length of each tweet
 - Total amount of tweets
 - Percentage of tweets that mention each character above a certain number of speaking lines
+- Tweets over time (graphic)
 
 
 *May require a list of stopwords so that terms like "the"/"and"/"a" aren't counted
