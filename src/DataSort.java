@@ -6,8 +6,10 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.util.HashMap;
 
 import javax.swing.*;
+import java.util.List;
 import java.util.Optional;
 
 public class DataSort {
@@ -33,6 +35,9 @@ public class DataSort {
             //begin sorting through the data
             //for every row in the sheet
             for (Row row : scriptSheet){
+                //skipping the first row for column names
+                if (row.getRowNum() == 0)
+                    continue;
                 //and for every cell in the rows
                 for (Cell cell : row){
                     //if this comes from Column 0, it is the name of the speaking character
@@ -106,13 +111,13 @@ public class DataSort {
 
             //track number of lines per speaking character
             //if the name is new
-            if (!characters.contains(l.getName())){
+            if (!characters.contains(l.getName().toLowerCase())){
                 //add to the character list. they have 1 line
-                characters.add(l.getName());
+                characters.add(l.getName().toLowerCase());
                 characterLines.add(1);
             } else {
                 //otherwise, find the speaking character's index
-                index = characters.indexOf(l.getName());
+                index = characters.indexOf(l.getName().toLowerCase());
                 //and increment their number of lines
                 temp = characterLines.get(index);
                 characterLines.set(index, temp+1);
@@ -166,6 +171,8 @@ public class DataSort {
         //read in the .xlsx file first
         //text-query-tweets.xlsx
 
+        ArrayList<Tweet> allTweets = new ArrayList<Tweet>();
+
         try {
             FileInputStream tweetFis = new FileInputStream(new File("text-query-tweets.xlsx"));
 
@@ -182,8 +189,6 @@ public class DataSort {
             ArrayList<String> hashtags = new ArrayList<String>();
             String[] hashTemps;
             String hash;
-
-            ArrayList<Tweet> allTweets = new ArrayList<Tweet>();
 
             //begin sorting through the data
             //for every row in the sheet
@@ -211,12 +216,16 @@ public class DataSort {
                         case (4): {
                             //grab the data
                             content = cell.getStringCellValue();
-                            //fix some corruption of the data
-                            //
-                            //remove ðŸ¤£ and ðŸ˜
+                            //fix some corruption of the data (mostly punctuation or emoji that java can't process)
+                            //remove ðŸ¤£, ðŸ˜, â€, â¤ï, , ðŸ¤, â€¦
                             content = content.replaceAll("â€™", "'");
                             content = content.replaceAll("ðŸ˜", "");
                             content = content.replaceAll("ðŸ¤£", "");
+                            content = content.replaceAll("â\u009D¤ï", "");
+                            content = content.replaceAll("\u008F", "");
+                            content = content.replaceAll("ðŸ¤", "");
+                            content = content.replaceAll("â€¦", "");
+                            content = content.replaceAll("ðŸ¥°", "");
                             break;
                         }
 
@@ -230,6 +239,14 @@ public class DataSort {
                             user = userTemp[7];
                             break;
                         }
+
+                        //if it's in column 12, it denotes the language of the tweet. for simplicity, the system only
+                        //processes tweets that are in english
+                        case (12):
+                            //if the language isn't english, skip this row
+                            if (!cell.getStringCellValue().equals("en"))
+                                content = null;
+                            break;
 
                         //if it's in column 25, it contains the hashtags
                         case(25):
@@ -250,20 +267,103 @@ public class DataSort {
                 }
                 //once all of the cells in the row have been iterated through, we can make the Tweet object and
                 //add it to the tweet list
-                Tweet t = new Tweet(content, user, date, time, hashtags);
-                allTweets.add(t);
+                if (content != null){
+                    Tweet t = new Tweet(content, user, date, time, hashtags);
+                    allTweets.add(t);
+                }
             }
 
-            //*****TESTING**********
-            //print the tweet list
-            for (Tweet t : allTweets)
-                System.out.println(t);
 
         } catch (IOException e) {
             System.out.println("The system encountered and IOException:");
             e.printStackTrace();
             System.exit(0);
         }
+
+
+
+        //With the tweet objects created, we can now go through them and start tracking some stats
+        //we want to know the characters most often mentioned and when
+
+        String[] terms;
+        ArrayList<String> tweetTerms = new ArrayList<String>();
+        double avgTerm = 0.0;
+        String[] tempContent;
+
+        //indexes match with the characters array
+        int[] characterTweets = new int[characters.size()];
+        //indexes match with the characters array and each ArrayList tracks the dates for each character
+        ArrayList<String>[] characterDates = new ArrayList[characters.size()];
+        HashMap<String, Integer> commonDates = new HashMap<String, Integer>();
+
+        //start by going through all the tweets
+        for (Tweet t : allTweets){
+            //for each tweet, we break it into terms
+            //first, we check if the tweet contains a link
+            if (t.getContent().contains("http")){
+                //if it does, we remove the link(s) before proceeding
+                tempContent = t.getContent().split("http");
+
+                //then we set the link's content to equal the first string chunk, which is now just the contents
+                t.setContent(tempContent[0]);
+
+            }
+            terms = t.getContent().split("[ ?.,:()&%$#!+*'/\"-]+");
+
+            //note how long the tweet was, in terms
+            avgTerm += terms.length * 1.0;
+
+            //then search all the terms
+            for (String term : terms){
+                //case folding
+                term = term.toLowerCase();
+                //if it's a character's name
+                if (characters.contains(term)){
+                    //increment the character's tweet count, and add the date to the character's date list
+                    int j = characters.indexOf(term);
+                    characterTweets[j] += 1;
+                    characterDates[j] = new ArrayList<String>();
+                    characterDates[j].add(t.getDate());
+                }
+
+                //while we're here, add the terms to the tweetTerms arraylist if it's not there already
+                if (!tweetTerms.contains(term)){
+                    tweetTerms.add(term);
+                }
+            }
+
+            //we also get the date
+            String date = t.getDate();
+            //if the date is not already in the hashmap
+            if (!commonDates.containsKey(date)){
+                //add the date with an initial count of 1
+                commonDates.put(date, 1);
+            } else {
+                //if the date is already in the hashmap, we just increment the count
+                int count = commonDates.get(date) + 1;
+                commonDates.put(date, count);
+            }
+
+            //finally, print the tweet for testing purposes
+            System.out.println(t);
+        }
+
+
+        //print the tweet counts of each character
+        for (int i = 0; i < characters.size(); i++){
+            System.out.println(characters.get(i) + " is mentioned in " + characterTweets[i] + " tweets.");
+        }
+
+        //print the tweet dates
+        for (String k : commonDates.keySet())
+            System.out.println(commonDates.get(k) + " tweets were made on " + k);
+
+        //print tweet number, tweet term number, and avg term length
+        System.out.println("There are a total of " + allTweets.size() + " tweets.");
+        System.out.println("There are a total of " + tweetTerms.size() + " terms in the tweets.");
+        avgTerm /= allTweets.size();
+        System.out.println("The average length of tweet in terms is " + avgTerm);
+
         /*
         //finish calculating the average length of dialogue lines by dividing by total number of lines
         avgLength /= allDialogue.size();

@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Tweet {
     private String content;
@@ -21,6 +22,7 @@ public class Tweet {
     public String getDate(){return date;}
     public String getTime(){return time;}
     public ArrayList<String> getTags(){return hashtags;}
+    public void setContent(String content){this.content = content;}
 
     //toString
     public String toString(){
